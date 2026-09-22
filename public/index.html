@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Company Ownership Auction — Multiplayer</title>
+<style>
+:root{--bg:#0a0e1a;--bg2:#0f1525;--card:rgba(255,255,255,0.06);--border:rgba(255,255,255,0.12);--gold:#f5c542;--gold2:#ffdb70;--green:#2ecc71;--red:#e74c3c;--blue:#4a9eff;--text:#fff;--dim:#8a93a8;--radius:16px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);background-image:radial-gradient(circle at 20% 0%,rgba(245,197,66,0.08) 0%,transparent 50%),radial-gradient(circle at 80% 100%,rgba(74,158,255,0.08) 0%,transparent 50%);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+#app{max-width:900px;margin:0 auto;padding:12px;min-height:100vh}
+.screen{display:none;animation:fadeIn .3s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 0 rgba(46,204,113,0)}50%{box-shadow:0 0 30px rgba(46,204,113,0.6)}}
+.glass{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.btn{border:none;border-radius:14px;padding:16px 20px;font-size:17px;font-weight:700;cursor:pointer;transition:all .15s ease;color:#fff;min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;user-select:none;font-family:inherit}
+.btn:active{transform:scale(0.96)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-gold{background:linear-gradient(135deg,#f5c542,#e0a91e);color:#1a1200;box-shadow:0 4px 20px rgba(245,197,66,0.3)}
+.btn-green{background:linear-gradient(135deg,#2ecc71,#1fa85a);box-shadow:0 4px 16px rgba(46,204,113,0.3)}
+.btn-red{background:linear-gradient(135deg,#e74c3c,#c0392b)}
+.btn-blue{background:linear-gradient(135deg,#4a9eff,#2b7de0)}
+.btn-gray{background:rgba(255,255,255,0.1);border:1px solid var(--border)}
+.btn-sm{padding:10px 14px;font-size:14px;min-height:42px;border-radius:11px}
+.btn-lg{padding:20px;font-size:20px;min-height:64px}
+.gold{color:var(--gold)}.green{color:var(--green)}.red{color:var(--red)}.dim{color:var(--dim)}
+.center{text-align:center}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.hero-logo{font-size:52px;text-align:center;margin:30px 0 8px;animation:pulse 3s ease-in-out infinite}
+.hero-title{font-size:28px;font-weight:900;text-align:center;line-height:1.15;background:linear-gradient(135deg,#fff,#f5c542);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{text-align:center;color:var(--dim);margin-top:10px;font-size:14px}
+.home-menu{margin-top:32px;display:flex;flex-direction:column;gap:12px}
+.input{width:100%;padding:15px;border-radius:12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#fff;font-size:16px;font-weight:600;outline:none;font-family:inherit}
+.input:focus{border-color:var(--gold)}
+.input-big{font-size:32px;font-weight:900;text-align:center;letter-spacing:4px;text-transform:uppercase;padding:20px}
+.label{font-size:13px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--card);border-radius:12px;border:1px solid var(--border)}
+.switch{width:52px;height:30px;border-radius:15px;background:rgba(255,255,255,0.15);position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+.switch.on{background:var(--green)}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.2s}
+.switch.on::after{left:25px}
+.company-hero{text-align:center;padding:22px 16px;border-radius:20px;background:linear-gradient(160deg,rgba(245,197,66,0.14),rgba(255,255,255,0.03));border:1px solid rgba(245,197,66,0.3)}
+.company-name{font-size:30px;font-weight:900;line-height:1.1}
+.company-cat{display:inline-block;padding:5px 14px;border-radius:20px;background:rgba(255,255,255,0.1);font-size:12px;font-weight:700;margin-top:8px;letter-spacing:0.5px;text-transform:uppercase}
+.ownership-big{font-size:44px;font-weight:900;color:var(--gold);line-height:1}
+.bid-panel{margin-top:14px;padding:18px;border-radius:18px;background:linear-gradient(160deg,rgba(46,204,113,0.1),rgba(255,255,255,0.03));border:1px solid rgba(46,204,113,0.3)}
+.bid-panel.leader{animation:glowPulse 2s infinite}
+.bid-amount{font-size:40px;font-weight:900;color:var(--green);line-height:1}
+.bidder-name{font-size:18px;font-weight:800}
+.player-chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.pchip{padding:12px;border-radius:14px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;gap:10px;transition:.2s;position:relative;overflow:hidden}
+.pchip.out{opacity:.4}
+.pchip.leader{border-color:var(--green);background:rgba(46,204,113,0.12)}
+.pchip.me{border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,197,66,0.3)}
+.pchip-avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#000}
+.pchip-name{font-weight:800;font-size:14px}
+.pchip-budget{font-size:12px;color:var(--dim);font-weight:700}
+.pchip-pass{position:absolute;top:6px;right:8px;font-size:10px;font-weight:900;color:var(--red)}
+.pchip-me-tag{position:absolute;top:6px;right:8px;font-size:10px;font-weight:900;color:var(--gold);background:rgba(245,197,66,0.15);padding:2px 6px;border-radius:8px}
+.progress-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.1);overflow:hidden;margin-top:10px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .4s}
+.stat-row{display:flex;justify-content:space-between;padding:6px 0;font-size:15px}
+.stat-row .k{color:var(--dim);font-weight:600}
+.stat-row .v{font-weight:800}
+.filter-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px}
+.filter-row::-webkit-scrollbar{display:none}
+.filter-chip{padding:8px 14px;border-radius:20px;background:var(--card);border:1px solid var(--border);font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;color:var(--dim)}
+.filter-chip.active{background:var(--gold);color:#1a1200;border-color:var(--gold)}
+.co-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:12px;background:var(--card);margin-bottom:6px;border-left:3px solid transparent}
+.co-row.sold{border-left-color:var(--green)}
+.co-row.unsold{border-left-color:var(--red);opacity:.6}
+.co-row.current{border-left-color:var(--gold);background:rgba(245,197,66,0.1)}
+.co-name{font-weight:800;font-size:15px}
+.co-meta{font-size:12px;color:var(--dim)}
+.co-pct{font-weight:900;color:var(--gold);font-size:17px;text-align:right}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px;max-width:420px;width:100%;animation:fadeIn .25s;max-height:85vh;overflow-y:auto}
+.modal h3{font-size:22px;margin-bottom:12px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a2035;border:1px solid var(--border);color:#fff;padding:14px 22px;border-radius:14px;font-weight:700;z-index:200;transition:.3s;max-width:90%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:var(--green)}
+.toast.err{border-color:var(--red)}
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.back-btn{width:42px;height:42px;border-radius:12px;background:var(--card);border:1px solid var(--border);color:#fff;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:inherit}
+.topbar-title{font-size:19px;font-weight:900;flex:1}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(10,14,26,0.95);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;padding:6px 4px calc(6px + env(safe-area-inset-bottom));max-width:900px;margin:0 auto}
+.nav-btn{flex:1;background:none;border:none;color:var(--dim);padding:8px 4px;font-size:10px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:10px;transition:.15s;font-family:inherit}
+.nav-btn .ico{font-size:20px}
+.nav-btn.active{color:var(--gold);background:rgba(245,197,66,0.1)}
+.screen.has-nav{padding-bottom:80px}
+.code-badge{display:inline-block;padding:6px 14px;border-radius:12px;background:rgba(245,197,66,0.15);border:1px solid var(--gold);font-weight:900;letter-spacing:3px;color:var(--gold);font-size:20px}
+.player-lobby-row{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--card);border:1px solid var(--border);margin-bottom:8px}
+.waiting-pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;margin-right:6px}
+.bid-quick-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.log-item{font-size:13px;padding:8px 12px;border-radius:10px;background:var(--card);margin-bottom:6px;border-left:3px solid var(--gold)}
+.log-item.sale{border-left-color:var(--green)}
+.log-item.unsold{border-left-color:var(--red)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modal"><div class="modal" id="modalContent"></div></div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let S = null;
+let screen = "home";
+let myRole = null;
+let myName = "";
+let roomCode = "";
+let localUI = {};
+
+function formatINR(crore){if(crore===null||crore===undefined||isNaN(crore))return "₹0";const neg=crore<0;let c=Math.abs(crore);let out;if(c<1){const lakh=c*100;out="₹"+(Math.round(lakh*100)/100).toString().replace(/\.00$/,'')+" lakh"}else{out="₹"+(Math.round(c*100)/100).toString().replace(/\.00$/,'')+" crore"}return (neg?"-":"")+out}
+function formatCroreShort(c){return "₹"+(Math.round(c*100)/100).toString().replace(/\.00$/,'')+" Cr"}
+function formatPct(p){return (Math.round(p*10)/10).toString().replace(/\.0$/,'.0')+"%"}
+function toast(msg,type=""){const t=document.getElementById("toast");t.textContent=msg;t.className="toast show "+type;clearTimeout(t._timer);t._timer=setTimeout(()=>{t.className="toast"},2200)}
+function modal(html){document.getElementById("modalContent").innerHTML=html;document.getElementById("modal").classList.add("active")}
+function closeModal(){document.getElementById("modal").classList.remove("active")}
+function nav(s){screen=s;render();window.scrollTo(0,0)}
+
+socket.on("connect",()=>{console.log("Connected")});
+socket.on("state",(state)=>{const wasFinished=S&&S.finished;S=state;
+if(S.finished&&screen!=="final"&&screen!=="portfolio"&&screen!=="bonus"&&screen!=="dashboard"){nav("final");return}
+if(S.started&&screen==="lobby")nav("auction");
+if(!S.started&&screen!=="lobby"&&myRole)nav("lobby");
+render()});
+socket.on("disconnect",()=>{toast("Disconnected from server","err")});
+
+function screenHome(){return `<div class="screen active">
+<div class="hero-logo">🏢</div>
+<div class="hero-title">COMPANY<br>OWNERSHIP AUCTION</div>
+<div class="hero-sub">Multiplayer • Live Bidding • Multiple Devices</div>
+<div class="home-menu">
+<button class="btn btn-gold btn-lg" onclick="nav('hostSetup')">🎩 Host a Game</button>
+<button class="btn btn-blue btn-lg" onclick="nav('joinGame')">🎮 Join a Game</button>
+<button class="btn btn-gray" onclick="nav('rules')">📜 Rules</button>
+<button class="btn btn-gray" onclick="nav('about')">ℹ️ About</button>
+</div>
+<div class="center dim mt24" style="font-size:12px;padding-bottom:20px;">A fictional party game. Not a real investment app.</div>
+</div>`}
+
+function screenRules(){return `<div class="screen active">${topbar("📜 Rules","home")}
+<div class="glass" style="padding:18px;line-height:1.7;font-size:15px;">
+<h3 class="gold mb12">How to Play</h3>
+<p><b>1.</b> Every player starts with <b>₹100 crore</b>.</p>
+<p class="mt8"><b>2.</b> 96 companies auctioned one by one. Each has a <b>fixed ownership %</b> (0.5%–5%).</p>
+<p class="mt8"><b>3.</b> The percentage is NOT the price. Players bid <b>money</b> in ₹.</p>
+<p class="mt8"><b>4.</b> Opening bid: <b>₹50 lakh</b>. Minimum raise: <b>₹10 lakh</b>.</p>
+<p class="mt8"><b>5.</b> Highest bidder pays their bid and gets the fixed ownership %.</p>
+<p class="mt8"><b>6.</b> Cannot bid more than remaining budget.</p>
+<p class="mt8"><b>7.</b> Press <b>PASS</b> to leave the current auction.</p>
+<hr style="border-color:rgba(255,255,255,0.1);margin:14px 0;">
+<h3 class="gold mb12">Multiplayer</h3>
+<p>• <b>Host</b> creates a room and shares the 4-letter code.</p>
+<p>• <b>Players</b> join with the code on their own device.</p>
+<p>• Each player places their own bids from their phone.</p>
+<p>• Host confirms sales, marks unsold, advances the auction.</p>
+<hr style="border-color:rgba(255,255,255,0.1);margin:14px 0;">
+<h3 class="gold mb12">Final Score</h3>
+<p><b>Final Ownership % × ₹10,00,000</b></p>
+</div></div>`}
+
+function screenAbout(){return `<div class="screen active">${topbar("ℹ️ About","home")}
+<div class="glass" style="padding:18px;line-height:1.7;font-size:15px;">
+<h3 class="gold mb12">Company Ownership Auction</h3>
+<p>Real-time multiplayer party game for 2–8 players on separate devices.</p>
+<p class="mt12"><b>⚠️ Disclaimer:</b> This is NOT a real stock market or investment app. Company names are used fictitiously. No real money, ownership, or financial data is involved.</p>
+</div></div>`}
+
+function screenHostSetup(){return `<div class="screen active">${topbar("🎩 Host a Game","home")}
+<div class="glass" style="padding:20px;">
+<div class="label">Your Name (Banker)</div>
+<input class="input mb16" id="hostName" placeholder="Enter your name" maxlength="16" value="${myName}">
+<div class="label">Minimum Raise</div>
+<div class="grid3 mb16">
+${[0.1,0.25,0.5,1].map(r=>`<button class="btn btn-sm ${(localUI.minRaise||0.1)===r?'btn-gold':'btn-gray'}" onclick="localUI.minRaise=${r};render()">${formatINR(r)}</button>`).join("")}
+</div>
+<div class="toggle mb16">
+<div><div style="font-weight:800;">Randomize company order</div><div class="dim" style="font-size:12px;">Shuffle the 96 companies</div></div>
+<div class="switch ${localUI.randomize?'on':''}" onclick="localUI.randomize=!localUI.randomize;render()"></div>
+</div>
+</div>
+<button class="btn btn-gold btn-lg mt16" onclick="doCreateRoom()">🎩 Create Room</button>
+<div class="center dim mt16" style="font-size:13px;">You'll get a 4-letter code to share with players</div>
+</div>`}
+
+function doCreateRoom(){const name=document.getElementById("hostName").value.trim()||"Banker";myName=name;myRole="host";
+socket.emit("createRoom",{hostName:name},(r)=>{if(r.ok){roomCode=r.code;nav("lobby")}else{toast("Failed to create room","err")}})}
+
+function screenJoinGame(){return `<div class="screen active">${topbar("🎮 Join a Game","home")}
+<div class="glass" style="padding:20px;">
+<div class="label">Room Code</div>
+<input class="input input-big mb16" id="joinCode" placeholder="XXXX" maxlength="4" value="${roomCode}" style="text-transform:uppercase;">
+<div class="label">Your Name</div>
+<input class="input mb16" id="joinName" placeholder="Enter your name" maxlength="16" value="${myName}">
+</div>
+<button class="btn btn-blue btn-lg mt16" onclick="doJoinRoom()">🎮 Join Room</button>
+</div>`}
+
+function doJoinRoom(){const code=document.getElementById("joinCode").value.trim().toUpperCase();
+const name=document.getElementById("joinName").value.trim()||"Player";
+if(code.length!==4){toast("Enter a 4-letter code","err");return}
+myName=name;myRole="player";
+socket.emit("joinRoom",{code,name},(r)=>{if(r.ok){roomCode=r.code;nav("lobby")}else{toast(r.error||"Failed to join","err")}})}
+
+function screenLobby(){if(!S)return screenHome();
+const isHost=S.isHost;const me=S.me;
+const players=S.players.map(p=>`<div class="player-lobby-row" style="border-left:4px solid ${p.color};">
+<div class="pchip-avatar" style="background:${p.color};">${p.name.charAt(0).toUpperCase()}</div>
+<div style="flex:1;"><div style="font-weight:800;">${p.name}${me&&p.id===me.id?' <span class="gold" style="font-size:11px;">(YOU)</span>':''}</div>
+<div class="dim" style="font-size:12px;">₹100 crore • ready</div></div>
+</div>`).join("");
+return `<div class="screen active">
+<div class="topbar"><div class="topbar-title">${isHost?"🎩 Host Lobby":"🎮 Lobby"}</div></div>
+<div class="glass center" style="padding:20px;margin-bottom:14px;">
+<div class="label">Room Code — Share This</div>
+<div class="code-badge">${S.code}</div>
+<div class="dim mt12" style="font-size:13px;">Players open this app, tap "Join a Game", enter the code</div>
+</div>
+<div class="glass" style="padding:16px;margin-bottom:14px;">
+<div class="label">Players (${S.players.length}/8)</div>
+${players||`<div class="dim center" style="padding:20px;">Waiting for players to join…</div>`}
+${S.players.length<2?`<div class="center dim mt12" style="font-size:13px;"><span class="waiting-pulse"></span>Need at least 2 players</div>`:`<div class="center green mt12" style="font-size:13px;">✓ Ready to start</div>`}
+</div>
+${isHost?`<button class="btn btn-gold btn-lg" onclick="doStartGame()" ${S.players.length<2?"disabled":""}>🚀 Start Game</button>
+<button class="btn btn-gray mt12" style="width:100%;" onclick="doResetRoom()">🗑️ Close Room</button>`
+:`<div class="glass center" style="padding:20px;"><div class="waiting-pulse"></div><div class="dim mt8">Waiting for host to start…</div></div>
+<button class="btn btn-gray mt12" style="width:100%;" onclick="doLeaveRoom()">Leave Room</button>`}
+</div>`}
+
+function doStartGame(){socket.emit("startGame",{randomize:!!localUI.randomize},(r)=>{if(!r.ok)toast(r.error||"Failed","err")})}
+function doResetRoom(){modal(`<h3 class="red">Close Room?</h3><p class="mt8">All players will be disconnected.</p>
+<div class="grid2 mt16"><button class="btn btn-gray" onclick="closeModal()">Cancel</button>
+<button class="btn btn-red" onclick="confirmCloseRoom()">Close</button></div>`)}
+function confirmCloseRoom(){closeModal();location.reload()}
+function doLeaveRoom(){location.reload()}
+
+function screenAuction(){if(!S)return screenHome();
+const me=S.me;const isHost=S.isHost;const c=S.currentCompany;
+if(!c){return `<div class="screen active">${topbar("Auction","home")}
+<div class="glass center" style="padding:30px;"><div style="font-size:50px;">🏁</div>
+<h2 class="mt12">All companies processed!</h2></div></div>`}
+const curBid=S.currentBid;
+const leader=curBid?S.players.find(p=>p.id===curBid.playerId):null;
+const startBid=S.auctionStartBid!==null?S.auctionStartBid:c.openBid;
+const minNeeded=curBid?curBid.amount+S.minRaise:startBid;
+const progress=(S.currentIdx/S.totalCompanies)*100;
+const iAmLeader=curBid&&me&&curBid.playerId===me.id;
+const iPassed=me&&S.passedPlayers.includes(me.id);
+const myBudget=me?me.budget:0;
+const canBid=me&&!iPassed&&!iAmLeader&&myBudget>=minNeeded&&S.phase!=="sold"&&S.phase!=="unsold";
+const chips=S.players.map(p=>{const passed=S.passedPlayers.includes(p.id);
+const isLeader=curBid&&curBid.playerId===p.id;
+const isMe=me&&me.id===p.id;
+return `<div class="pchip ${passed?'out':''} ${isLeader?'leader':''} ${isMe?'me':''}">
+${isMe?`<div class="pchip-me-tag">YOU</div>`:(passed?`<div class="pchip-pass">PASSED</div>`:"")}
+<div class="pchip-avatar" style="background:${p.color}">${p.name.charAt(0).toUpperCase()}</div>
+<div style="flex:1;min-width:0;"><div class="pchip-name">${p.name}</div>
+<div class="pchip-budget">${formatCroreShort(p.budget)}</div></div></div>`}).join("");
+let bidButtons="";
+if(me&&S.phase!=="sold"&&S.phase!=="unsold"){
+if(iPassed){bidButtons=`<div class="glass center" style="padding:16px;border-color:var(--red);"><div class="red" style="font-weight:900;">You passed this auction</div></div>`}
+else if(iAmLeader){bidButtons=`<div class="glass center" style="padding:16px;border-color:var(--green);animation:glowPulse 2s infinite;"><div class="green" style="font-weight:900;">🏆 You are the highest bidder!</div>
+<div class="dim mt8" style="font-size:13px;">Waiting for others or banker</div></div>`}
+else{const inc=S.minRaise;
+bidButtons=`<div class="label">Place Your Bid (min ${formatINR(minNeeded)})</div>
+<div class="bid-quick-grid">
+<button class="btn btn-green" ${!canBid?"disabled":""} onclick="doBid(${minNeeded})">${formatINR(minNeeded)}</button>
+<button class="btn btn-green" ${(myBudget<minNeeded+inc)?"disabled":""} onclick="doBid(${Math.round((minNeeded+inc)*100)/100})">${formatINR(minNeeded+inc)}</button>
+<button class="btn btn-green" ${(myBudget<minNeeded+inc*2)?"disabled":""} onclick="doBid(${Math.round((minNeeded+inc*2)*100)/100})">${formatINR(minNeeded+inc*2)}</button>
+</div>
+<div class="grid2 mt8">
+<button class="btn btn-blue" ${!canBid?"disabled":""} onclick="doCustomBid()">✏️ Custom</button>
+<button class="btn btn-red" onclick="doPass()">PASS</button>
+</div>
+<div class="center dim mt8" style="font-size:12px;">Your budget: ${formatCroreShort(myBudget)}</div>`}}
+else if(isHost&&!me){bidButtons=`<div class="glass center" style="padding:14px;"><div class="dim">You are the banker — players place their own bids</div></div>`}
+let bankerControls="";
+if(isHost){
+if(S.phase==="sold"||S.phase==="unsold"){bankerControls=`<button class="btn btn-gold btn-lg" style="width:100%;" onclick="doNext()">Next Company →</button>`}
+else if(curBid){bankerControls=`<div class="label">Banker — Confirm Sale</div>
+<button class="btn btn-gold btn-lg" style="width:100%;" onclick="doSell()">🔨 SOLD to ${leader.name} for ${formatINR(curBid.amount)}</button>
+<div class="grid2 mt8">
+<button class="btn btn-red btn-sm" onclick="doMarkUnsold()">Mark Unsold</button>
+<button class="btn btn-gray btn-sm" onclick="doUndo()" ${S.saleHistory.length===0?"disabled":""}>↩️ Undo Last Sale</button>
+</div>`}
+else{bankerControls=`<div class="label">Banker Controls</div>
+<div class="grid2">
+<button class="btn btn-red" onclick="doMarkUnsold()">Mark UNSOLD</button>
+<button class="btn btn-gray" onclick="doUndo()" ${S.saleHistory.length===0?"disabled":""}>↩️ Undo</button>
+</div>
+<div class="dim center mt8" style="font-size:12px;">Waiting for players to bid…</div>`}}
+return `<div class="screen active has-nav">
+<div class="topbar"><div class="topbar-title">🔨 Auction</div>
+<div class="dim" style="font-size:13px;font-weight:800;">#${S.currentIdx+1}/${S.totalCompanies}</div></div>
+<div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
+<div class="company-hero mt12">
+<div class="company-name">${c.name}</div>
+<div class="company-cat">${c.category}</div>
+<div class="mt16" style="display:flex;gap:20px;justify-content:center;align-items:flex-end;">
+<div><div class="dim" style="font-size:11px;font-weight:800;letter-spacing:1px;">OWNERSHIP</div>
+<div class="ownership-big">${formatPct(c.pct)}</div></div>
+<div><div class="dim" style="font-size:11px;font-weight:800;letter-spacing:1px;">OPENING BID</div>
+<div style="font-size:24px;font-weight:900;color:#fff;">${formatINR(startBid)}</div></div>
+</div></div>
+<div class="bid-panel mt12 ${iAmLeader?'leader':''}">
+<div class="dim" style="font-size:11px;font-weight:800;letter-spacing:1px;">CURRENT BID</div>
+${curBid?`<div class="bid-amount">${formatINR(curBid.amount)}</div>
+<div class="bidder-name mt8">by <span style="color:${leader.color}">${leader.name}</span>${iAmLeader?' <span class="gold">(YOU)</span>':''}</div>`
+:`<div class="bid-amount" style="color:var(--dim);font-size:28px;">No bids yet</div>
+<div class="dim mt8">Minimum: ${formatINR(minNeeded)}</div>`}
+</div>
+${S.phase==="sold"?`<div class="glass mt12 center" style="padding:16px;border-color:var(--green);">
+<div style="font-size:32px;">✅</div>
+<div class="green" style="font-weight:900;font-size:18px;">SOLD to ${leader?leader.name:""}!</div>
+${isHost?`<button class="btn btn-gold btn-lg mt12" style="width:100%;" onclick="doNext()">Next →</button>`:`<div class="dim mt8" style="font-size:13px;">Waiting for banker…</div>`}</div>`:""}
+${S.phase==="unsold"?`<div class="glass mt12 center" style="padding:16px;border-color:var(--red);">
+<div style="font-size:32px;">❌</div>
+<div class="red" style="font-weight:900;font-size:18px;">UNSOLD</div>
+${isHost?`<button class="btn btn-gold btn-lg mt12" style="width:100%;" onclick="doNext()">Next →</button>`:`<div class="dim mt8" style="font-size:13px;">Waiting for banker…</div>`}</div>`:""}
+${me||isHost?`<div class="glass mt16" style="padding:14px;">${bidButtons}${bankerControls?`<div class="mt12" style="border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;">${bankerControls}</div>`:""}</div>`:""}
+<div class="mt16"><div class="label">Players</div>
+<div class="player-chips">${chips}</div></div>
+${bottomNav("auction")}
+</div>`}
+
+function doBid(amount){socket.emit("placeBid",{amount},(r)=>{if(!r.ok)toast(r.error,"err");else toast("Bid placed!","ok")})}
+function doCustomBid(){const me=S.me;const cur=S.currentBid;const c=S.currentCompany;
+const minNeeded=cur?cur.amount+S.minRaise:(S.auctionStartBid??c.openBid);
+modal(`<h3 class="gold">Custom Bid</h3>
+<p class="dim mb12">Budget: ${formatINR(me.budget)} • Min: ${formatINR(minNeeded)}</p>
+<input class="input" id="customBidInput" type="number" step="0.1" value="${minNeeded}">
+<div class="grid2 mt12"><button class="btn btn-gray" onclick="closeModal()">Cancel</button>
+<button class="btn btn-green" onclick="submitCustomBid()">Bid</button></div>`);
+setTimeout(()=>{const el=document.getElementById("customBidInput");if(el)el.focus()},100)}
+function submitCustomBid(){const v=parseFloat(document.getElementById("customBidInput").value);
+if(isNaN(v)){toast("Invalid amount","err");return}
+closeModal();doBid(Math.round(v*100)/100)}
+function doPass(){socket.emit("pass",(r)=>{if(!r.ok)toast(r.error||"Failed","err");else toast("Passed","ok")})}
+function doSell(){modal(`<h3 class="gold">Confirm Sale</h3>
+<p class="mt12">Sell <b>${S.currentCompany.name}</b> to <b>${S.players.find(p=>p.id===S.currentBid.playerId).name}</b> for <b class="green">${formatINR(S.currentBid.amount)}</b>?</p>
+<div class="grid2 mt16"><button class="btn btn-gray" onclick="closeModal()">Cancel</button>
+<button class="btn btn-green" onclick="closeModal();socket.emit('sell',(r)=>{if(!r.ok)toast(r.error,'err');else toast('Sold!','ok')})">Confirm</button></div>`)}
+function doMarkUnsold(){modal(`<h3 class="red">Mark as UNSOLD?</h3>
+<p class="mt8">${S.currentCompany.name} will remain unowned.</p>
+<div class="grid2 mt16"><button class="btn btn-gray" onclick="closeModal()">Cancel</button>
+<button class="btn btn-red" onclick="closeModal();socket.emit('markUnsold',(r)=>{if(!r.ok)toast(r.error,'err')})">Confirm</button></div>`)}
+function doNext(){socket.emit("next",(r)=>{if(!r.ok)toast(r.error,"err")})}
+function doUndo(){modal(`<h3 class="gold">↩️ Undo Last Sale?</h3>
+<p class="mt8">Refund the buyer and return the company?</p>
+<div class="grid2 mt16"><button class="btn btn-gray" onclick="closeModal()">Cancel</button>
+<button class="btn btn-red" onclick="closeModal();socket.emit('undo',(r)=>{if(!r.ok)toast(r.error,'err');else toast('Undone','ok')})">Confirm</button></div>`)}
+
+function screenDashboard(){if(!S)return screenHome();
+const totalSpent=S.saleHistory.reduce((a,s)=>a+s.amount,0);
+const cards=S.players.map(p=>`<div class="glass" style="padding:16px;margin-bottom:10px;border-left:4px solid ${p.color};">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+<div class="pchip-avatar" style="background:${p.color};width:38px;height:38px;">${p.name.charAt(0)}</div>
+<div style="flex:1;"><div style="font-weight:900;font-size:17px;">${p.name}${S.me&&p.id===S.me.id?' <span class="gold" style="font-size:11px;">(YOU)</span>':''}</div>
+<div class="dim" style="font-size:12px;">${p.passed?"Passed":(S.currentBid&&S.currentBid.playerId===p.id?"Leading":"Active")}</div></div></div>
+<div class="stat-row"><span class="k">Budget</span><span class="v">${formatCroreShort(p.budget)}</span></div>
+<div class="stat-row"><span class="k">Companies</span><span class="v">${p.companies.length}</span></div>
+<div class="stat-row"><span class="k">Base %</span><span class="v">${formatPct(p.base)}</span></div>
+<div class="stat-row"><span class="k">Bonus</span><span class="v green">+${p.bonus}%</span></div>
+<div class="stat-row"><span class="k">Final %</span><span class="v gold" style="font-size:18px;">${formatPct(p.final)}</span></div>
+</div>`).join("");
+return `<div class="screen active has-nav">${topbar("📊 Dashboard","home")}
+<div class="glass" style="padding:14px;margin-bottom:12px;">
+<div class="grid2">
+<div class="center"><div class="dim" style="font-size:11px;">CURRENT</div><div style="font-weight:900;font-size:20px;">#${S.currentIdx+1}</div></div>
+<div class="center"><div class="dim" style="font-size:11px;">REMAINING</div><div style="font-weight:900;font-size:20px;">${S.totalCompanies-S.currentIdx}</div></div>
+<div class="center"><div class="dim" style="font-size:11px;">SOLD</div><div style="font-weight:900;font-size:20px;color:var(--green);">${S.saleHistory.length}</div></div>
+<div class="center"><div class="dim" style="font-size:11px;">UNSOLD</div><div style="font-weight:900;font-size:20px;color:var(--red);">${S.unsoldCompanies.length}</div></div>
+</div>
+<div class="center mt12"><div class="dim" style="font-size:11px;">TOTAL SPENT</div>
+<div class="gold" style="font-weight:900;font-size:22px;">${formatINR(totalSpent)}</div></div>
+</div>
+${cards}
+${bottomNav("dashboard")}
+</div>`}
+
+let dbFilter="All";
+const ALL_CATS=["All","Technology","Automotive","Fashion","Luxury","Food","Retail","Engineering","Aerospace","Telecom","Diversified"];
+function screenDatabase(){if(!S)return screenHome();
+const list=window.COMPANIES_CLIENT||[];
+const filtered=list.filter(c=>{if(dbFilter==="All")return true;
+return c.category.toLowerCase().includes(dbFilter.toLowerCase())});
+const rows=filtered.map(c=>{const sale=S.saleHistory.find(s=>s.companyId===c.id);
+const owner=sale?S.players.find(p=>p.id===sale.playerId):null;
+const unsold=S.unsoldCompanies.includes(c.id);
+const isCur=S.currentCompany&&S.currentCompany.id===c.id&&!sale&&!unsold;
+let cls="co-row";if(owner)cls+=" sold";else if(unsold)cls+=" unsold";else if(isCur)cls+=" current";
+return `<div class="${cls}">
+<div style="flex:1;"><div class="co-name">${c.name}</div>
+<div class="co-meta">${c.category} • ${formatINR(c.openBid)} open</div>
+${owner?`<div class="green" style="font-size:12px;font-weight:700;margin-top:2px;">Owner: ${owner.name}</div>`:(unsold?`<div class="red" style="font-size:12px;font-weight:700;margin-top:2px;">UNSOLD</div>`:"")}
+</div>
+<div class="co-pct">${formatPct(c.pct)}</div>
+</div>`}).join("");
+return `<div class="screen active has-nav">${topbar("🏢 Companies","home")}
+<div class="filter-row">${ALL_CATS.map(cat=>`<div class="filter-chip ${dbFilter===cat?'active':''}" onclick="dbFilter='${cat}';render()">${cat}</div>`).join("")}</div>
+<div class="dim" style="font-size:12px;margin-bottom:8px;">${filtered.length} companies • ${S.saleHistory.length} sold • ${S.unsoldCompanies.length} unsold</div>
+${rows}
+${bottomNav("database")}
+</div>`}
+
+let portfolioPlayerId=null;
+function screenPortfolio(){if(!S)return screenHome();
+const me=S.me;
+if(!portfolioPlayerId&&me)portfolioPlayerId=me.id;
+if(!portfolioPlayerId&&S.players[0])portfolioPlayerId=S.players[0].id;
+const p=S.players.find(x=>x.id===portfolioPlayerId)||S.players[0];
+if(!p)return screenHome();
+const list=window.COMPANIES_CLIENT||[];
+const rows=p.companies.map(cid=>{const c=list.find(x=>x.id===cid);if(!c)return "";
+const sale=S.saleHistory.find(s=>s.companyId===cid&&s.playerId===p.id);
+return `<div class="co-row sold">
+<div style="flex:1;"><div class="co-name">${c.name}</div><div class="co-meta">${c.category}</div></div>
+<div style="text-align:right;"><div class="co-pct">${formatPct(c.pct)}</div>
+<div class="dim" style="font-size:11px;">paid ${formatCroreShort(sale.amount)}</div></div></div>`}).join("");
+const totalSpent=S.saleHistory.filter(s=>s.playerId===p.id).reduce((a,s)=>a+s.amount,0);
+return `<div class="screen active has-nav">
+<div class="topbar"><div class="topbar-title">💼 Portfolio</div></div>
+<div class="filter-row">${S.players.map(pl=>`<div class="filter-chip ${pl.id===p.id?'active':''}" onclick="portfolioPlayerId='${pl.id}';render()" style="border-color:${pl.color};">${pl.name}</div>`).join("")}</div>
+<div class="glass" style="padding:16px;margin-bottom:12px;border-left:4px solid ${p.color};">
+<div style="font-size:22px;font-weight:900;color:${p.color};">${p.name}${me&&p.id===me.id?' <span class="gold" style="font-size:12px;">(YOU)</span>':''}</div>
+<div class="stat-row mt8"><span class="k">Remaining Budget</span><span class="v">${formatCroreShort(p.budget)}</span></div>
+<div class="stat-row"><span class="k">Total Spent</span><span class="v">${formatCroreShort(totalSpent)}</span></div>
+<div class="stat-row"><span class="k">Companies</span><span class="v">${p.companies.length}</span></div>
+<div class="stat-row"><span class="k">Base %</span><span class="v">${formatPct(p.base)}</span></div>
+<div class="stat-row"><span class="k">Bonus</span><span class="v green">+${p.bonus}%</span></div>
+<div class="stat-row"><span class="k">Final %</span><span class="v gold" style="font-size:20px;">${formatPct(p.final)}</span></div>
+</div>
+${p.unlocked&&p.unlocked.length?`<div class="mb12">${p.unlocked.map(u=>`<span style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(46,204,113,0.2);color:var(--green);font-size:12px;font-weight:800;margin:2px;">✅ ${u.label} +${u.reward}%</span>`).join("")}</div>`:""}
+<div class="label">Companies Owned (${p.companies.length})</div>
+${rows||`<div class="glass center dim" style="padding:30px;">No companies yet</div>`}
+${bottomNav("portfolio")}
+</div>`}
+
+function screenBonus(){if(!S)return screenHome();
+const me=S.me;
+if(!portfolioPlayerId&&me)portfolioPlayerId=me.id;
+if(!portfolioPlayerId&&S.players[0])portfolioPlayerId=S.players[0].id;
+const p=S.players.find(x=>x.id===portfolioPlayerId)||S.players[0];
+let html=`${topbar("⭐ Bonus Center","home")}<div class="filter-row">
+${S.players.map(pl=>`<div class="filter-chip ${pl.id===p.id?'active':''}" onclick="portfolioPlayerId='${pl.id}';render()">${pl.name}</div>`).join("")}</div>`;
+html+=`<div class="glass" style="padding:14px;margin-bottom:14px;">
+<div style="font-weight:900;font-size:18px;color:${p.color};">${p.name}'s Bonuses</div>
+<div class="stat-row mt8"><span class="k">Base</span><span class="v">${formatPct(p.base)}</span></div>
+<div class="stat-row"><span class="k">Total Bonus</span><span class="v green">+${p.bonus}%</span></div>
+<div class="stat-row"><span class="k">Final</span><span class="v gold" style="font-size:18px;">${formatPct(p.final)}</span></div>
+</div>`;
+const bonusDefs=[
+{key:"NVIDIA",reward:1.0,desc:"Own 3+ Technology companies"},
+{key:"Tesla",reward:1.0,desc:"Own 3+ Automotive companies"},
+{key:"Nike",reward:0.5,desc:"After Nike, win another Fashion/Sportswear company"},
+{key:"Ferrari",reward:0.5,desc:"After Ferrari, win another Luxury company"},
+{key:"Zara",reward:1.0,desc:"Own 3+ Fashion/Luxury companies"},
+{key:"Coca-Cola",reward:1.0,desc:"Own 3+ Food/FMCG companies"},
+{key:"Amazon",reward:1.0,desc:"Own 3+ Retail companies"},
+{key:"Reliance",reward:1.0,desc:"Own companies from 5+ different categories"}
+];
+const list=window.COMPANIES_CLIENT||[];
+bonusDefs.forEach(def=>{
+const owned=p.unlocked.some(u=>u.key===def.key);
+const pendingInfo=p.pending.find(x=>x.key===def.key);
+const coMatch=list.find(c=>c.name===def.key||c.name.startsWith(def.key));
+const hasCo=coMatch&&p.companies.includes(coMatch.id);
+let status="";
+if(!hasCo)status=`<div class="dim" style="font-size:13px;">Not owned</div>`;
+else if(owned)status=`<div class="green" style="font-weight:900;">✅ UNLOCKED +${def.reward}%</div>`;
+else status=`<div class="red" style="font-weight:700;">❌ ${pendingInfo?pendingInfo.desc:"Not met"}</div>`;
+html+=`<div class="glass" style="padding:14px;margin-bottom:12px;border-left:3px solid ${owned?'var(--green)':'rgba(255,255,255,0.1)'};">
+<div style="display:flex;justify-content:space-between;">
+<div style="font-weight:900;">${def.key}</div>
+<div class="gold" style="font-weight:900;">+${def.reward}%</div></div>
+<div class="dim mt8" style="font-size:13px;">${def.desc}</div>
+<div class="mt8">${status}</div>
+</div>`});
+html+=bottomNav("bonus");
+return `<div class="screen active has-nav">${html}</div>`}
+
+function screenFinal(){if(!S)return screenHome();
+if(!S.finished){return `<div class="screen active">${topbar("🏆 Final Scores","auction")}
+<div class="glass center" style="padding:30px;"><p>Game isn't finished yet.</p>
+<button class="btn btn-gold mt16" onclick="nav('auction')">Back</button></div></div>`}
+const standings=S.players.map(p=>({p,final:p.final,score:Math.round(p.final*1000000),bonus:p.bonus,base:p.base,budget:p.budget,companies:p.companies.length}))
+.sort((a,b)=>{if(b.score!==a.score)return b.score-a.score;
+if(b.budget!==a.budget)return b.budget-a.budget;
+if(b.companies!==a.companies)return b.companies-a.companies;
+return 0});
+const top=standings[0];
+const isTie=standings.length>1&&standings[0].score===standings[1].score&&standings[0].budget===standings[1].budget&&standings[0].companies===standings[1].companies;
+const list=standings.map((s,i)=>{const medal=["🥇","🥈","🥉"][i]||`#${i+1}`;
+return `<div class="glass" style="padding:16px;margin-bottom:10px;border-left:4px solid ${s.p.color};${i===0?'background:rgba(245,197,66,0.08);border:1px solid var(--gold);':''}">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+<div style="font-size:26px;">${medal}</div>
+<div style="flex:1;"><div style="font-weight:900;font-size:18px;color:${s.p.color};">${s.p.name}</div></div></div>
+<div class="stat-row"><span class="k">Final %</span><span class="v gold" style="font-size:18px;">${formatPct(s.final)}</span></div>
+<div class="stat-row"><span class="k">Base / Bonus</span><span class="v">${formatPct(s.base)} / +${s.bonus}%</span></div>
+<div class="stat-row"><span class="k">Score</span><span class="v gold">₹${s.score.toLocaleString('en-IN')}</span></div>
+<div class="stat-row"><span class="k">Budget Left</span><span class="v">${formatCroreShort(s.budget)}</span></div>
+<div class="stat-row"><span class="k">Companies</span><span class="v">${s.companies}</span></div>
+</div>`}).join("");
+return `<div class="screen active">
+<div class="center" style="padding:30px 16px;">
+<div style="font-size:80px;animation:pulse 2s infinite;">${isTie?"🤝":"🏆"}</div>
+<div class="gold" style="font-size:32px;font-weight:900;">${isTie?"DRAW!":top.p.name}</div>
+<div class="dim mt8">${isTie?"Equal scores":"WINNER"}</div>
+</div>
+${list}
+<button class="btn btn-gray mt16" style="width:100%;" onclick="location.reload()">🏠 Exit to Home</button>
+</div>`}
+
+function topbar(title,backScreen){return `<div class="topbar">
+<button class="back-btn" onclick="nav('${backScreen}')">‹</button>
+<div class="topbar-title">${title}</div>
+</div>`}
+function bottomNav(active){const items=[
+{key:"auction",icon:"🔨",label:"Auction"},
+{key:"dashboard",icon:"📊",label:"Board"},
+{key:"database",icon:"🏢",label:"Companies"},
+{key:"portfolio",icon:"💼",label:"My Owned"},
+{key:"bonus",icon:"⭐",label:"Bonus"}
+];
+return `<div class="bottom-nav">
+${items.map(it=>`<button class="nav-btn ${active===it.key?'active':''}" onclick="nav('${it.key}')">
+<span class="ico">${it.icon}</span><span>${it.label}</span>
+</button>`).join("")}
+</div>`}
+
+function render(){let html="";
+switch(screen){
+case "home":html=screenHome();break;
+case "rules":html=screenRules();break;
+case "about":html=screenAbout();break;
+case "hostSetup":html=screenHostSetup();break;
+case "joinGame":html=screenJoinGame();break;
+case "lobby":html=screenLobby();break;
+case "auction":html=screenAuction();break;
+case "dashboard":html=screenDashboard();break;
+case "database":html=screenDatabase();break;
+case "portfolio":html=screenPortfolio();break;
+case "bonus":html=screenBonus();break;
+case "final":html=screenFinal();break;
+default:html=screenHome();
+}
+document.getElementById("app").innerHTML=html}
+
+window.COMPANIES_CLIENT=[{id:0,name:"Apple",category:"Technology",pct:5.0,openBid:0.5},{id:1,name:"Google",category:"Technology",pct:5.0,openBid:0.5},{id:2,name:"Microsoft",category:"Technology",pct:5.0,openBid:0.5},{id:3,name:"Amazon",category:"Technology/Retail",pct:4.5,openBid:0.5},{id:4,name:"NVIDIA",category:"Technology/AI",pct:4.5,openBid:0.5},{id:5,name:"Samsung",category:"Technology",pct:4.5,openBid:0.5},{id:6,name:"Meta",category:"Technology/Social",pct:4.0,openBid:0.5},{id:7,name:"Netflix",category:"Technology/Media",pct:3.0,openBid:0.5},{id:8,name:"Sony",category:"Technology/Entertainment",pct:3.5,openBid:0.5},{id:9,name:"Nintendo",category:"Technology/Gaming",pct:2.5,openBid:0.5},{id:10,name:"Dell Technologies",category:"Technology",pct:2.5,openBid:0.5},{id:11,name:"Lenovo",category:"Technology",pct:2.5,openBid:0.5},{id:12,name:"Xiaomi",category:"Technology",pct:3.0,openBid:0.5},{id:13,name:"Huawei",category:"Technology",pct:3.0,openBid:0.5},{id:14,name:"Intel",category:"Technology/Semiconductors",pct:3.0,openBid:0.5},{id:15,name:"AMD",category:"Technology/Semiconductors",pct:3.5,openBid:0.5},{id:16,name:"Adobe",category:"Technology/Software",pct:3.0,openBid:0.5},{id:17,name:"Oracle",category:"Technology/Software",pct:3.5,openBid:0.5},{id:18,name:"Salesforce",category:"Technology/Software",pct:3.0,openBid:0.5},{id:19,name:"SAP",category:"Technology/Software",pct:3.0,openBid:0.5},{id:20,name:"Tesla",category:"Automotive",pct:4.5,openBid:0.5},{id:21,name:"Toyota",category:"Automotive",pct:5.0,openBid:0.5},{id:22,name:"Mercedes-Benz",category:"Automotive/Luxury",pct:3.5,openBid:0.5},{id:23,name:"BMW",category:"Automotive/Luxury",pct:3.5,openBid:0.5},{id:24,name:"Volkswagen",category:"Automotive",pct:3.5,openBid:0.5},{id:25,name:"Ferrari",category:"Automotive/Luxury",pct:2.5,openBid:0.5},{id:26,name:"Porsche",category:"Automotive/Luxury",pct:3.0,openBid:0.5},{id:27,name:"Ford",category:"Automotive",pct:3.0,openBid:0.5},{id:28,name:"General Motors",category:"Automotive",pct:3.0,openBid:0.5},{id:29,name:"Honda",category:"Automotive",pct:3.5,openBid:0.5},{id:30,name:"Hyundai",category:"Automotive",pct:3.5,openBid:0.5},{id:31,name:"Tata Motors",category:"Automotive",pct:3.5,openBid:0.5},{id:32,name:"Mahindra & Mahindra",category:"Automotive",pct:3.0,openBid:0.5},{id:33,name:"Maruti Suzuki",category:"Automotive",pct:3.5,openBid:0.5},{id:34,name:"BYD",category:"Automotive/EV",pct:3.5,openBid:0.5},{id:35,name:"Volvo Cars",category:"Automotive",pct:2.0,openBid:0.5},{id:36,name:"Nike",category:"Fashion/Sportswear",pct:4.5,openBid:0.5},{id:37,name:"Zara (Inditex)",category:"Fashion",pct:4.5,openBid:0.5},{id:38,name:"Adidas",category:"Fashion/Sportswear",pct:4.0,openBid:0.5},{id:39,name:"Uniqlo (Fast Retailing)",category:"Fashion",pct:3.5,openBid:0.5},{id:40,name:"H&M",category:"Fashion",pct:3.0,openBid:0.5},{id:41,name:"Lululemon",category:"Fashion/Sportswear",pct:2.5,openBid:0.5},{id:42,name:"Puma",category:"Fashion/Sportswear",pct:2.5,openBid:0.5},{id:43,name:"Levi Strauss",category:"Fashion",pct:2.0,openBid:0.5},{id:44,name:"Ralph Lauren",category:"Fashion/Luxury",pct:2.0,openBid:0.5},{id:45,name:"Under Armour",category:"Fashion/Sportswear",pct:1.5,openBid:0.5},{id:46,name:"ANTA Sports",category:"Fashion/Sportswear",pct:1.5,openBid:0.5},{id:47,name:"Gap",category:"Fashion",pct:1.5,openBid:0.5},{id:48,name:"Louis Vuitton (LVMH)",category:"Luxury Fashion",pct:4.5,openBid:0.5},{id:49,name:"Hermès",category:"Luxury Fashion",pct:4.0,openBid:0.5},{id:50,name:"Chanel",category:"Luxury Fashion",pct:4.0,openBid:0.5},{id:51,name:"Gucci (Kering)",category:"Luxury Fashion",pct:3.5,openBid:0.5},{id:52,name:"Cartier (Richemont)",category:"Luxury",pct:3.0,openBid:0.5},{id:53,name:"Rolex",category:"Luxury/Watches",pct:3.0,openBid:0.5},{id:54,name:"Burberry",category:"Luxury Fashion",pct:2.0,openBid:0.5},{id:55,name:"Prada",category:"Luxury Fashion",pct:2.5,openBid:0.5},{id:56,name:"Ray-Ban (EssilorLuxottica)",category:"Fashion/Eyewear",pct:2.5,openBid:0.5},{id:57,name:"Skechers",category:"Fashion/Footwear",pct:2.0,openBid:0.5},{id:58,name:"ASICS",category:"Fashion/Sportswear",pct:2.0,openBid:0.5},{id:59,name:"New Balance",category:"Fashion/Sportswear",pct:2.0,openBid:0.5},{id:60,name:"Coca-Cola",category:"Food & Beverage",pct:4.5,openBid:0.5},{id:61,name:"PepsiCo",category:"Food & Beverage",pct:4.0,openBid:0.5},{id:62,name:"McDonald's",category:"Food & Beverage",pct:4.0,openBid:0.5},{id:63,name:"Starbucks",category:"Food & Beverage",pct:3.5,openBid:0.5},{id:64,name:"Nestlé",category:"Food & Beverage",pct:4.0,openBid:0.5},{id:65,name:"Unilever",category:"FMCG",pct:4.0,openBid:0.5},{id:66,name:"Procter & Gamble",category:"FMCG",pct:3.5,openBid:0.5},{id:67,name:"L'Oréal",category:"Beauty/FMCG",pct:3.5,openBid:0.5},{id:68,name:"Colgate-Palmolive",category:"FMCG",pct:2.5,openBid:0.5},{id:69,name:"Mondelez",category:"Food & Beverage",pct:2.5,openBid:0.5},{id:70,name:"Ferrero",category:"Food & Beverage",pct:2.0,openBid:0.5},{id:71,name:"Red Bull",category:"Food & Beverage",pct:2.5,openBid:0.5},{id:72,name:"IKEA",category:"Retail/Home",pct:3.5,openBid:0.5},{id:73,name:"Walmart",category:"Retail",pct:4.5,openBid:0.5},{id:74,name:"Costco",category:"Retail",pct:3.5,openBid:0.5},{id:75,name:"Target",category:"Retail",pct:2.5,openBid:0.5},{id:76,name:"Alibaba",category:"Technology/Retail",pct:4.0,openBid:0.5},{id:77,name:"Tencent",category:"Technology",pct:4.0,openBid:0.5},{id:78,name:"Jio",category:"Telecom/Technology",pct:3.5,openBid:0.5},{id:79,name:"Bharti Airtel",category:"Telecom",pct:3.0,openBid:0.5},{id:80,name:"Reliance Industries",category:"Diversified",pct:4.5,openBid:0.5},{id:81,name:"Adani Enterprises",category:"Diversified",pct:2.5,openBid:0.5},{id:82,name:"Larsen & Toubro",category:"Engineering",pct:2.5,openBid:0.5},{id:83,name:"Siemens",category:"Engineering/Technology",pct:3.0,openBid:0.5},{id:84,name:"Bosch",category:"Engineering/Technology",pct:2.5,openBid:0.5},{id:85,name:"Philips",category:"Technology/Healthcare",pct:2.5,openBid:0.5},{id:86,name:"LG",category:"Technology/Consumer",pct:3.0,openBid:0.5},{id:87,name:"Panasonic",category:"Technology/Consumer",pct:2.5,openBid:0.5},{id:88,name:"Airbus",category:"Aerospace",pct:3.0,openBid:0.5},{id:89,name:"Boeing",category:"Aerospace",pct:3.0,openBid:0.5},{id:90,name:"Uber",category:"Technology/Transport",pct:2.5,openBid:0.5},{id:91,name:"Airbnb",category:"Technology/Travel",pct:2.5,openBid:0.5},{id:92,name:"Spotify",category:"Technology/Media",pct:2.5,openBid:0.5},{id:93,name:"YouTube",category:"Technology/Media",pct:4.0,openBid:0.5},{id:94,name:"WhatsApp",category:"Technology/Social",pct:3.5,openBid:0.5},{id:95,name:"TikTok (ByteDance)",category:"Technology/Media",pct:4.0,openBid:0.5}];
+
+render();
+</script>
+</body>
+</html>
